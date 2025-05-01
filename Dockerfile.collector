@@ -1,0 +1,21 @@
+# Build stage
+FROM golang:1.22-alpine AS builder
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /collector ./cmd/collector
+
+# Final stage
+FROM alpine:latest
+
+WORKDIR /
+COPY --from=builder /collector /collector
+
+# Install CA certificates for HTTPS requests
+RUN apk --no-cache add ca-certificates
+
+EXPOSE 8080
+CMD ["/collector"]
